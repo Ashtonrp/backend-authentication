@@ -1,9 +1,22 @@
-import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { useAuth } from "../../context/AuthContext";
 
 export default function HomeScreen() {
-    const handleSignOut = () => {
-        console.log("Sign out pressed")
+    const { user, signOut } = useAuth();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [authError, setAuthError] = useState<string | null>(null);
+
+    const handleSignOut = async () => {
+        try {
+            setAuthError(null);
+            setIsSubmitting(true);
+            await signOut();
+        } catch (e) {
+            setAuthError(e instanceof Error ? e.message : "Sign out failed.");
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     return(
@@ -14,13 +27,18 @@ export default function HomeScreen() {
                     This is the protected area
                 </Text>
 
-                <View style={styles.card}>
-                    <Text style={styles.cardLabel}>Status</Text>
-                    <Text style={styles.cardText}>Authenticated</Text>
-                </View>
+                 {authError && <Text style={styles.errorText}>{authError}</Text>}
 
-                <Pressable style={styles.signOutButton} onPress={handleSignOut}>
-                    <Text style={styles.signOutButtonText}>Sign Out</Text>
+                <Pressable 
+                    style={[styles.button, isSubmitting && styles.buttonDisabled]} 
+                    onPress={handleSignOut}
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                        <Text style={styles.buttonText}>Sign Out</Text>
+                    )}
                 </Pressable>
             </View>
         </View>
@@ -30,7 +48,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
-        backgroundColor: "#0F0F10"
+        backgroundColor: "#0F0F10",
     },
     container: {
         flex: 1,
@@ -47,35 +65,23 @@ const styles = StyleSheet.create({
         color: "#A1A1AA",
         fontSize: 15,
         lineHeight: 22,
-        marginBottom: 28,
-    },
-    card: {
-        backgroundColor: "#1A1A1D",
-        borderWidth: 1,
-        borderColor: "#2A2A2E",
-        borderRadius: 16,
-        padding: 18,
         marginBottom: 24,
     },
-    cardLabel: {
-        color: "#A1A1AA",
+    errorText: {
+        color: "#FF6B6B",
         fontSize: 13,
-        marginBottom: 6,
+        marginBottom: 12,
     },
-    cardText: {
-        color: "#FFFFFF",
-        fontSize: 18,
-        fontWeight: "600",
-    },
-    signOutButton: {
-        backgroundColor: "#2A2A2E",
-        borderWidth: 1,
-        borderColor: "#3A3A40",
+    button: {
+        backgroundColor: "#7C3AED",
         borderRadius: 14,
         paddingVertical: 15,
         alignItems: "center",
     },
-    signOutButtonText: {
+    buttonDisabled: {
+        opacity: 0.7,
+    },
+    buttonText: {
         color: "#FFFFFF",
         fontSize: 16,
         fontWeight: "700",

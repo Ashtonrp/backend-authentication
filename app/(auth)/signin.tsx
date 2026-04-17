@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -12,8 +13,13 @@ import { Link } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signInSchema, type SignInFormData } from "../../schema/auth";
+import { useAuth } from "../../context/AuthContext";
 
 export default function SignInScreen() {
+    const { signIn } = useAuth();
+    const [authError, setAuthError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const {
         control,
         handleSubmit,
@@ -26,8 +32,16 @@ export default function SignInScreen() {
         },
     });
 
-    const onSubmit = (data: SignInFormData) => {
-        console.log("Sign in form submitted:", data);
+    const onSubmit = async (data: SignInFormData) => {
+        try {
+            setAuthError(null);
+            setIsSubmitting(true);
+            await signIn(data.email, data.password);
+        } catch (e) {
+            setAuthError(e instanceof Error ? e.message : "Sign in failed.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return(
@@ -90,8 +104,18 @@ export default function SignInScreen() {
                         )}
                     </View>
 
-                    <Pressable style={styles.button} onPress={handleSubmit(onSubmit)}>
-                        <Text style={styles.buttonText}>Sign In</Text>
+                    {authError && <Text style={styles.errorText}>{authError}</Text>}
+
+                    <Pressable 
+                        style={[styles.button, isSubmitting && styles.buttonDisabled]} 
+                        onPress={handleSubmit(onSubmit)}
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                            <Text style={styles.buttonText}>Sign In</Text>
+                        )}
                     </Pressable>
                 </View>
 
@@ -184,4 +208,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
     },
+    buttonDisabled: {
+        opacity: 0.7,
+    }
 });

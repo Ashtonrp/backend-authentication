@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -12,8 +13,13 @@ import { Link } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signUpSchema, type SignUpFormData } from "../../schema/auth";
+import { useAuth } from "../../context/AuthContext";
 
 export default function SignUpScreen() {
+  const { signUp } = useAuth();
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const {
     control,
     handleSubmit,
@@ -27,8 +33,16 @@ export default function SignUpScreen() {
     },
   });
 
-  const onSubmit = (data: SignUpFormData) => {
-    console.log("Sign up form submitted:", data);
+  const onSubmit = async (data: SignUpFormData) => {
+    try {
+      setAuthError(null);
+      setIsSubmitting(true);
+      await signUp(data.email, data.password);
+    } catch (e) {
+      setAuthError(e instanceof Error ? e.message : "Sign up failed.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -104,6 +118,9 @@ export default function SignUpScreen() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
                 />
               )}
             />
@@ -114,14 +131,24 @@ export default function SignUpScreen() {
             )}
           </View>
 
-          <Pressable style={styles.button} onPress={handleSubmit(onSubmit)}>
-            <Text style={styles.buttonText}>Create Account</Text>
+          {authError && <Text style={styles.errorText}>{authError}</Text>}
+
+          <Pressable 
+            style={[styles.button, isSubmitting && styles.buttonDisabled]} 
+            onPress={handleSubmit(onSubmit)}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>Create Account</Text>
+            )}
           </Pressable>
         </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Account already exists?</Text>
-          <Link href="/(auth)/sign-in" style={styles.link}>
+          <Link href="/(auth)/signin" style={styles.link}>
             Sign In
           </Link>
         </View>
@@ -207,5 +234,8 @@ const styles = StyleSheet.create({
     color: "#C084FC",
     fontSize: 14,
     fontWeight: "600",
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
 });
